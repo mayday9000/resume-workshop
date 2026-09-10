@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Resume Workshop</title>
+<style>
+  :root {
+    --bg: #14161a; --panel: #1c1f26; --line: #2c313b; --ink: #e6e8ec;
+    --muted: #9aa3b2; --accent: #d97757; --ok: #5fb87a; --warn: #d9a441; --err: #e0605e;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; height: 100vh; display: flex; flex-direction: column;
+    background: var(--bg); color: var(--ink);
+    font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--panel);
+  }
+  header h1 { font-size: 14px; font-weight: 600; margin: 0; white-space: nowrap; }
+  header .spacer { flex: 1; }
+  button, select {
+    background: #262b34; color: var(--ink); border: 1px solid var(--line);
+    border-radius: 6px; padding: 5px 11px; font: inherit; font-size: 13px; cursor: pointer;
+  }
+  button:hover:not(:disabled), select:hover { background: #2f3540; }
+  button:disabled { opacity: .5; cursor: default; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #1a1206; font-weight: 600; }
+  .main { flex: 1; display: flex; min-height: 0; }
+
+  /* chat */
+  .chat { width: 42%; min-width: 340px; display: flex; flex-direction: column; border-right: 1px solid var(--line); }
+  .log { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .msg .who { font-size: 11px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin-bottom: 3px; }
+  .msg.user .bubble { background: #262b34; border-radius: 8px; padding: 8px 11px; white-space: pre-wrap; }
+  .msg.claude .bubble { white-space: pre-wrap; }
+  .steps { font-family: var(--mono); font-size: 11.5px; color: var(--muted); margin: 6px 0 0; padding-left: 14px; }
+  .steps li { margin: 1px 0; }
+  .flag { font-family: var(--mono); font-size: 11.5px; padding: 5px 9px; border-radius: 5px; margin-top: 6px; }
+  .flag.warn { background: rgba(217,164,65,.12); color: var(--warn); }
+  .flag.err  { background: rgba(224,96,94,.12); color: var(--err); }
+  .composer { border-top: 1px solid var(--line); padding: 10px; display: flex; gap: 8px; background: var(--panel); }
+  textarea {
+    flex: 1; resize: none; background: #14161a; color: var(--ink);
+    border: 1px solid var(--line); border-radius: 6px; padding: 9px 11px; font: inherit; min-height: 62px;
+  }
+  textarea:focus { outline: none; border-color: var(--accent); }
+  .status { padding: 6px 16px; border-top: 1px solid var(--line); font-family: var(--mono); font-size: 11.5px; color: var(--muted); background: var(--panel); }
+
+  /* preview */
+  .preview { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .preview .bar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--line); background: var(--panel); }
+  .preview .frame { flex: 1; background: #3a3f48; overflow: auto; display: flex; justify-content: center; padding: 18px; }
+  iframe, embed { border: 0; background: #fff; }
+  iframe { width: 8.5in; min-height: 11in; box-shadow: 0 2px 18px rgba(0,0,0,.45); }
+  embed { width: 100%; height: 100%; }
+
+  /* versions */
+  .versions { border-top: 1px solid var(--line); background: var(--panel); max-height: 34vh; display: flex; flex-direction: column; }
+  .versions .bar { display: flex; align-items: center; gap: 10px; padding: 7px 14px; cursor: pointer; user-select: none; }
+  .versions .bar h2 { font-size: 12px; font-weight: 600; margin: 0; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); }
+  .rows { overflow-y: auto; }
+  .row { display: flex; align-items: center; gap: 10px; padding: 6px 14px; border-top: 1px solid var(--line); font-size: 13px; }
+  .row:hover { background: #232830; }
+  .row code { font-family: var(--mono); font-size: 12px; color: var(--accent); }
+  .row .subject { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row .when { color: var(--muted); font-size: 12px; white-space: nowrap; }
+  .row button { padding: 2px 8px; font-size: 12px; }
+
+  dialog { background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 10px; max-width: 90vw; width: 820px; padding: 0; }
+  dialog::backdrop { background: rgba(0,0,0,.6); }
+  dialog .head { display: flex; align-items: center; padding: 11px 15px; border-bottom: 1px solid var(--line); }
+  dialog .head h3 { margin: 0; font-size: 14px; flex: 1; }
+  dialog pre { margin: 0; padding: 15px; overflow: auto; max-height: 66vh; font-family: var(--mono); font-size: 12px; line-height: 1.45; }
+  .add { color: var(--ok); } .del { color: var(--err); } .hunk { color: var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Resume Workshop</h1>
+  <select id="variant" title="Which resume this chat edits"></select>
+  <button id="newVariant" title="Paste a job posting URL and tailor a variant to it">From job URL</button>
+  <span class="spacer"></span>
+  <span id="cost" style="color:var(--muted);font-size:12px;"></span>
+  <button id="exportBtn">Export PDF</button>
+</header>
+
+<div class="main">
+  <section class="chat">
+    <div class="log" id="log">
+      <div class="msg claude">
+        <div class="who">Claude</div>
+        <div class="bubble">Tell me what to change. Pick which resume you're editing in the dropdown above, or paste a job posting URL with <b>From job URL</b> and I'll build a variant tailored to it.</div>
+      </div>
+    </div>
+    <div class="composer">
+      <textarea id="input" placeholder="e.g. Tighten the first bullet to one line" autofocus></textarea>
+      <button class="primary" id="send">Send</button>
+    </div>
+    <div class="status" id="status">ready</div>
+  </section>
+
+  <section class="preview">
+    <div class="bar">
+      <button id="viewHtml" class="primary">HTML</button>
+      <button id="viewPdf">PDF</button>
+      <span class="spacer" style="flex:1"></span>
+      <button id="refresh">Refresh</button>
+    </div>
+    <div class="frame" id="frame"></div>
+  </section>
+</div>
+
+<section class="versions">
+  <div class="bar" id="versionsBar">
+    <h2>Version history</h2>
+    <span id="chev" style="color:var(--muted)">▾</span>
+  </div>
+  <div class="rows" id="rows"></div>
+</section>
+
+<dialog id="modal">
+  <div class="head"><h3 id="modalTitle">Diff</h3><button id="modalClose">Close</button></div>
+  <pre id="modalBody"></pre>
+</dialog>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const log = $('log'), statusEl = $('status'), frame = $('frame');
+let view = 'html';
+let variant = null;
+const targetName = () => variant || 'resume';
+
+const setStatus = (t) => { statusEl.textContent = t; };
+const scroll = () => { log.scrollTop = log.scrollHeight; };
+
+function renderPreview() {
+  const bust = Date.now();
+  const name = targetName();
+  frame.innerHTML = view === 'html'
+    ? `<iframe src="/build/${name}.html?t=${bust}"></iframe>`
+    : `<embed src="/build/${name}.pdf?t=${bust}" type="application/pdf">`;
+}
+$('viewHtml').onclick = () => { view = 'html'; $('viewHtml').classList.add('primary'); $('viewPdf').classList.remove('primary'); renderPreview(); };
+$('viewPdf').onclick  = () => { view = 'pdf';  $('viewPdf').classList.add('primary');  $('viewHtml').classList.remove('primary'); renderPreview(); };
+$('refresh').onclick = renderPreview;
+
+async function loadVariants(keep) {
+  const { variants = [] } = await (await fetch('/variants')).json();
+  const sel = $('variant');
+  const want = keep ?? variant ?? '';
+  sel.innerHTML = '';
+  for (const [value, label] of [['', 'Default — resume.md'], ...variants.map((v) => [v, v])]) {
+    const o = document.createElement('option');
+    o.value = value;
+    o.textContent = label;
+    sel.appendChild(o);
+  }
+  sel.value = variants.includes(want) || want === '' ? want : '';
+  variant = sel.value || null;
+}
+$('variant').onchange = () => {
+  variant = $('variant').value || null;
+  setStatus(`editing ${targetName()}`);
+  renderPreview();
+};
+
+async function loadVersions() {
+  const { versions = [] } = await (await fetch('/versions')).json();
+  $('rows').innerHTML = '';
+  for (const v of versions) {
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.innerHTML = `<code>${v.hash}</code><span class="subject"></span><span class="when">${v.relative}</span>`;
+    row.querySelector('.subject').textContent = v.subject;
+    for (const [label, fn] of [['Diff', () => showDiff(v.hash)], ['Restore', () => restore(v.hash)]]) {
+      const b = document.createElement('button');
+      b.textContent = label;
+      b.onclick = fn;
+      row.appendChild(b);
+    }
+    $('rows').appendChild(row);
+  }
+}
+
+async function showDiff(hash) {
+  const q = variant ? `?variant=${encodeURIComponent(variant)}` : '';
+  const text = await (await fetch(`/diff/${hash}${q}`)).text();
+  $('modalTitle').textContent = `Diff ${hash} → HEAD (${targetName()})`;
+  $('modalBody').innerHTML = text.split('\n').map((line) => {
+    const cls = line.startsWith('+') && !line.startsWith('+++') ? 'add'
+      : line.startsWith('-') && !line.startsWith('---') ? 'del'
+      : line.startsWith('@@') ? 'hunk' : '';
+    const safe = line.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+    return cls ? `<span class="${cls}">${safe}</span>` : safe;
+  }).join('\n');
+  $('modal').showModal();
+}
+$('modalClose').onclick = () => $('modal').close();
+
+async function restore(hash) {
+  if (!confirm(`Restore ${targetName()} from ${hash}? This commits a restore on top of history.`)) return;
+  setStatus(`restoring ${hash}...`);
+  const out = await (await fetch(`/restore/${hash}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ variant }),
+  })).json();
+  setStatus(out.error ? `restore failed: ${out.error}` : `restored from ${hash}${out.commit ? `, committed ${out.commit}` : ' (no change)'}`);
+  renderPreview();
+  loadVersions();
+}
+
+$('exportBtn').onclick = async () => {
+  const label = prompt('Export label (e.g. acme-swe-v1)', variant ? `${variant}-v1` : '');
+  if (!label) return;
+  setStatus('exporting (verify --strict)...');
+  const out = await (await fetch('/export', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ label, variant }),
+  })).json();
+  if (out.error) { setStatus('export failed'); alert(out.error); return; }
+  setStatus(`exported ${out.path} — tag ${out.tag}`);
+  loadVersions();
+};
+
+$('versionsBar').onclick = () => {
+  const rows = $('rows');
+  const hidden = rows.style.display === 'none';
+  rows.style.display = hidden ? 'block' : 'none';
+  $('chev').textContent = hidden ? '▾' : '▸';
+};
+
+function addMsg(who, cls, text) {
+  const el = document.createElement('div');
+  el.className = `msg ${cls}`;
+  el.innerHTML = `<div class="who"></div><div class="bubble"></div>`;
+  el.querySelector('.who').textContent = who;
+  if (text) el.querySelector('.bubble').textContent = text;
+  log.appendChild(el);
+  scroll();
+  return el;
+}
+
+/** Consumes an SSE stream from a POST and renders it into one assistant message. */
+async function consume(res, el) {
+  const bubble = el.querySelector('.bubble');
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = '';
+  let steps = null;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    const chunks = buf.split('\n\n');
+    buf = chunks.pop() ?? '';
+    for (const chunk of chunks) {
+      const evLine = chunk.match(/^event: (.+)$/m);
+      const dataLine = chunk.match(/^data: (.+)$/m);
+      if (!evLine || !dataLine) continue;
+      const type = evLine[1];
+      const data = JSON.parse(dataLine[1]);
+
+      if (type === 'text') { bubble.textContent += data.text; scroll(); }
+      else if (type === 'summary') { if (data.text) bubble.textContent = data.text; scroll(); }
+      else if (type === 'status') {
+        setStatus(data.text);
+        if (!steps) { steps = document.createElement('ul'); steps.className = 'steps'; el.appendChild(steps); }
+        const li = document.createElement('li');
+        li.textContent = data.text;
+        steps.appendChild(li);
+        scroll();
+      }
+      else if (type === 'cost') { $('cost').textContent = `$${data.usd.toFixed(3)} this turn`; }
+      else if (type === 'job') { await loadVariants(data.slug); renderPreview(); }
+      else if (type === 'verify') {
+        for (const [list, cls] of [[data.errors, 'err'], [data.warnings, 'warn']]) {
+          for (const item of list ?? []) {
+            const f = document.createElement('div');
+            f.className = `flag ${cls}`;
+            f.textContent = item;
+            el.appendChild(f);
+          }
+        }
+        scroll();
+      }
+      else if (type === 'error') {
+        const f = document.createElement('div');
+        f.className = 'flag err';
+        f.textContent = data.text;
+        el.appendChild(f);
+        setStatus('error');
+        scroll();
+      }
+      else if (type === 'reload') {
+        if (data.variant !== undefined) await loadVariants(data.variant ?? '');
+        renderPreview();
+        loadVersions();
+      }
+    }
+  }
+}
+
+async function post(url, body) {
+  $('send').disabled = true;
+  $('newVariant').disabled = true;
+  const el = addMsg('Claude', 'claude');
+  try {
+    const res = await fetch(url, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    });
+    await consume(res, el);
+  } catch (err) {
+    setStatus(`request failed: ${err.message}`);
+  } finally {
+    $('send').disabled = false;
+    $('newVariant').disabled = false;
+    $('input').focus();
+  }
+}
+
+async function send() {
+  const text = $('input').value.trim();
+  if (!text) return;
+  $('input').value = '';
+  addMsg('You', 'user', text);
+  setStatus('thinking...');
+  await post('/chat', { message: text, variant });
+}
+
+$('send').onclick = send;
+$('input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); send(); }
+});
+
+$('newVariant').onclick = async () => {
+  const url = prompt('Job posting URL — I will capture it and tailor a variant to it');
+  if (!url) return;
+  addMsg('You', 'user', `Build a variant for: ${url}`);
+  setStatus('fetching posting...');
+  await post('/job', { url });
+};
+
+(async () => {
+  await loadVariants();
+  renderPreview();
+  loadVersions();
+})();
+</script>
+</body>
+</html>

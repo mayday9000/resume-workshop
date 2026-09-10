@@ -1,0 +1,25 @@
+{
+  "name": "resume-workshop",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Local resume workshop: markdown source -> HTML -> one-page PDF, with a chat-driven editing app.",
+  "scripts": {
+    "ingest": "node scripts/ingest.mjs",
+    "render": "node scripts/render.mjs",
+    "verify": "node scripts/verify.mjs",
+    "export": "node scripts/export.mjs",
+    "dev": "node app/server.mjs",
+    "icon": "node scripts/make-icon.mjs",
+    "shortcut": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/make-shortcut.ps1",
+    "job": "node scripts/fetch-job.mjs"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "gray-matter": "^4.0.3",
+    "mammoth": "^1.9.0",
+    "markdown-it": "^14.1.0",
+    "pdfjs-dist": "^4.10.38",
+    "playwright": "^1.49.1"
+  }
+}

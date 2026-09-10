@@ -1,0 +1,9 @@
+node_modules/
+build/
+.DS_Store
+*.log
+
+# Your own source resumes and generated PDFs stay local by default.
+# Delete these two lines if you want them versioned in your own fork.
+inputs/*
+!inputs/.gitkeep

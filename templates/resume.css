@@ -1,0 +1,128 @@
+/* UNC Charlotte business resume format.
+   Serif throughout, 11pt body, 0.5in margins, section headings underlined to the text width,
+   dates flush right on the entry line, italic job titles, round bullets with a hanging indent.
+   Single column and no tables, so text still extracts cleanly for an ATS. */
+
+@page {
+  size: Letter;
+  margin: 0.5in;
+}
+
+:root {
+  --ink: #000;
+  --muted: #000;
+  --link: #0b57d0;
+  --body-size: 11pt;
+  --line: 1.12;
+  --gap: 10pt;              /* block-to-block spacing; tuned down from the example's 12.5pt to fit one full page */
+  --bullet-indent: 34pt;
+  --stack: "Times New Roman", Times, "Liberation Serif", Georgia, serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #fff;
+  color: var(--ink);
+  font-family: var(--stack);
+  font-size: var(--body-size);
+  line-height: var(--line);
+}
+
+/* Screen preview mimics the printed page so the iframe matches the PDF. */
+@media screen {
+  body {
+    width: 8.5in;
+    min-height: 11in;
+    margin: 0 auto;
+    padding: 0.5in;
+    box-shadow: 0 1px 12px rgba(0, 0, 0, 0.18);
+  }
+}
+
+.masthead {
+  text-align: center;
+  margin-bottom: var(--gap);
+}
+
+.name {
+  font-size: 18pt;
+  font-weight: 700;
+  margin: 0;
+  line-height: 1.1;
+}
+
+.contact {
+  margin: 2pt 0 0;
+  font-size: var(--body-size);
+}
+
+/* Section headings: same size as body, bold, caps, underlined only as wide as the text. */
+h2 {
+  font-size: var(--body-size);
+  font-weight: 700;
+  text-transform: uppercase;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  margin: var(--gap) 0 0;
+  break-after: avoid;
+  page-break-after: avoid;
+}
+
+h2:first-of-type { margin-top: 0; }
+
+p {
+  margin: 0;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+/* A blank line before each new entry, but not between an entry and its own bullets.
+   p + p covers back-to-back entries that carry no bullets, such as one-line involvement rows. */
+ul + p,
+p + p { margin-top: var(--gap); }
+
+/* Entry line: bold employer on the left, dates flush right. */
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 18pt;
+}
+
+.when { white-space: nowrap; }
+
+ul {
+  margin: 0;
+  padding-left: var(--bullet-indent);
+  list-style: disc outside;
+}
+
+li {
+  margin: 0;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+strong { font-weight: 700; }
+em { font-style: italic; }
+
+a {
+  color: var(--link);
+  text-decoration: underline;
+}
+
+/* Draft markers: loud on screen, invisible in print so a stray one never silently ships.
+   verify --strict is the real gate. */
+.confirm {
+  background: #ffe8a3;
+  border-bottom: 1px dotted #b8860b;
+  padding: 0 2px;
+}
+
+@media print {
+  .confirm { background: none; border-bottom: none; }
+  body { width: auto; padding: 0; box-shadow: none; }
+}
